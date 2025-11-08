@@ -1,18 +1,29 @@
+// server.js
 const express = require('express');
-const path = require('path');
-const app = express();
-const port = process.env.PORT || 3000;
+require('dotenv').config();
+const authRoutes = require('./routes/authRoutes');
+const protectedRoutes = require('./routes/protectedRoutes');
+const db = require('./db'); // ensure pool is created so we know connection params are valid
 
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, '../public')));
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// parse JSON bodies
 app.use(express.json());
 
-// Basic route for the home page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+// simple health
+app.get('/', (req, res) => res.send('API is running'));
+
+// routes
+app.use('/api/auth', authRoutes);
+app.use('/api', protectedRoutes);
+
+// global error logger (simple)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error', err);
+  res.status(500).json({ message: 'Internal server error' });
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });

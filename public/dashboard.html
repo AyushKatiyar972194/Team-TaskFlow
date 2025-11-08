@@ -1,0 +1,12 @@
+<h2>Your Tasks</h2>
+<div id="tasks"></div>
+<script>
+async function loadTasks(){
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/tasks',{headers:{Authorization:'Bearer '+token}});
+  const data = await res.json();
+  document.getElementById('tasks').innerHTML =
+    data.map(t=>`<div><b>${t.title}</b> - ${t.status}</div>`).join('');
+}
+loadTasks();
+</script>

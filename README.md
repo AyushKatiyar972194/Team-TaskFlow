@@ -161,8 +161,6 @@ Contributor roster (access/collaboration)
 - Harsh — feature: UI / Bootstrap layout
 - Dewansh — feature: API tests and documentation
 
-If you'd like, add GitHub profile links for each person here (e.g., https://github.com/<username>) so we can link them in the Contributors section.
-
 Contributing
 See CONTRIBUTING.md for full contribution guidelines, branch & PR conventions, code style, and testing expectations.
 

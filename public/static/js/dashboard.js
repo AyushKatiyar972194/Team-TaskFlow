@@ -70,15 +70,52 @@ async function loadTasks() {
         'completed': 'bg-success'
       }[task.status] || 'bg-secondary';
       
-      const deadline = task.deadline 
-        ? new Date(task.deadline).toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        : 'No deadline';
+      // Format deadline - parse manually to avoid timezone issues
+      let deadline = 'No deadline';
+      if (task.deadline) {
+        try {
+          // Parse the deadline string manually (MySQL returns "YYYY-MM-DD HH:mm:ss")
+          let year, month, day, hours, minutes;
+          
+          if (task.deadline.includes('T')) {
+            // ISO format: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ssZ"
+            const dateStr = task.deadline.split('T')[0];
+            const timeStr = task.deadline.split('T')[1] || '';
+            const dateParts = dateStr.split('-');
+            const timeParts = (timeStr.split('.')[0] || timeStr.split('Z')[0] || timeStr).split(':');
+            
+            year = parseInt(dateParts[0]);
+            month = parseInt(dateParts[1]) - 1; // 0-indexed
+            day = parseInt(dateParts[2]);
+            hours = parseInt(timeParts[0] || 0);
+            minutes = parseInt(timeParts[1] || 0);
+          } else {
+            // MySQL DATETIME format: "YYYY-MM-DD HH:mm:ss"
+            const parts = task.deadline.split(/[- :]/);
+            year = parseInt(parts[0]);
+            month = parseInt(parts[1]) - 1; // 0-indexed
+            day = parseInt(parts[2]);
+            hours = parseInt(parts[3] || 0);
+            minutes = parseInt(parts[4] || 0);
+          }
+          
+          // Create date object with local time components
+          const deadlineDate = new Date(year, month, day, hours, minutes);
+          
+          // Format for display
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const displayMonth = monthNames[deadlineDate.getMonth()];
+          const displayDay = deadlineDate.getDate();
+          const displayYear = deadlineDate.getFullYear();
+          const displayHours = String(deadlineDate.getHours()).padStart(2, '0');
+          const displayMinutes = String(deadlineDate.getMinutes()).padStart(2, '0');
+          
+          deadline = `${displayMonth} ${displayDay}, ${displayYear} ${displayHours}:${displayMinutes}`;
+        } catch (error) {
+          console.error('Error formatting deadline:', error);
+          deadline = task.deadline; // Fallback to raw value
+        }
+      }
       
       col.innerHTML = `
         <div class="card task-card shadow-sm h-100">

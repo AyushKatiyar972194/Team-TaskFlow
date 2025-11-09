@@ -1,6 +1,6 @@
-```markdown
-# Team-TaskFlow
 
+# Team-TaskFlow
+```markdown
 Team-TaskFlow is a collaborative task and workflow management application designed to help small to medium teams plan, assign, and track work. It offers boards, tasks, comments, assignments, and basic reporting to improve team productivity and visibility.
 
 Status: WIP — update any placeholders to match the repository's real implementation.
@@ -73,7 +73,7 @@ Environment variables (replace with actual keys from the project)
 - NODE_ENV=development
 - JWT_SECRET=your_jwt_secret
 - REDIS_URL=redis://localhost:6379 (optional)
-- CLIENT_URL=http://localhost:3000
+- CLIENT_URL=http://localhost:5000
 
 Local development
 - Use nodemon or equivalent for backend hot reload: npm run dev

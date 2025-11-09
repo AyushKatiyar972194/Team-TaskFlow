@@ -109,13 +109,35 @@
         
         // Format deadline for datetime-local input
         if (task.deadline) {
-          const deadlineDate = new Date(task.deadline);
-          const year = deadlineDate.getFullYear();
-          const month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
-          const day = String(deadlineDate.getDate()).padStart(2, '0');
-          const hours = String(deadlineDate.getHours()).padStart(2, '0');
-          const minutes = String(deadlineDate.getMinutes()).padStart(2, '0');
-          document.getElementById('deadline').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+          // Parse the deadline string (MySQL returns "YYYY-MM-DD HH:mm:ss")
+          // We need to parse it manually to avoid timezone conversion issues
+          let year, month, day, hours, minutes;
+          
+          // Handle different date formats
+          if (task.deadline.includes('T')) {
+            // ISO format: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ssZ"
+            const dateStr = task.deadline.split('T')[0];
+            const timeStr = task.deadline.split('T')[1] || '';
+            const dateParts = dateStr.split('-');
+            const timeParts = (timeStr.split('.')[0] || timeStr.split('Z')[0] || timeStr).split(':');
+            
+            year = dateParts[0];
+            month = dateParts[1];
+            day = dateParts[2];
+            hours = timeParts[0] || '00';
+            minutes = timeParts[1] || '00';
+          } else {
+            // MySQL DATETIME format: "YYYY-MM-DD HH:mm:ss"
+            const parts = task.deadline.split(/[- :]/);
+            year = parts[0];
+            month = parts[1];
+            day = parts[2];
+            hours = parts[3] || '00';
+            minutes = parts[4] || '00';
+          }
+          
+          // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+          document.getElementById('deadline').value = `${year}-${month}-${day}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
         }
 
         // Show form and hide loading

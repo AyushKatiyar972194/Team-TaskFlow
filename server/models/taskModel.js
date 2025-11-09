@@ -21,7 +21,17 @@ const Task = {
 
   update: (id, title, description, status, deadline, callback) => {
     const sql = 'UPDATE tasks SET title = ?, description = ?, status = ?, deadline = ? WHERE id = ?';
-    db.query(sql, [title, description, status, deadline, id], callback);
+    console.log('Task.update called with:', { id, title, description, status, deadline });
+    console.log('SQL:', sql);
+    console.log('Parameters:', [title, description, status, deadline, id]);
+    db.query(sql, [title, description, status, deadline, id], (err, result) => {
+      if (err) {
+        console.error('Database update error:', err);
+      } else {
+        console.log('Database update result:', result);
+      }
+      callback(err, result);
+    });
   },
 
   delete: (id, callback) => {

@@ -109,35 +109,41 @@
         
         // Format deadline for datetime-local input
         if (task.deadline) {
-          // Parse the deadline string (MySQL returns "YYYY-MM-DD HH:mm:ss")
-          // We need to parse it manually to avoid timezone conversion issues
-          let year, month, day, hours, minutes;
-          
-          // Handle different date formats
-          if (task.deadline.includes('T')) {
-            // ISO format: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ssZ"
-            const dateStr = task.deadline.split('T')[0];
-            const timeStr = task.deadline.split('T')[1] || '';
-            const dateParts = dateStr.split('-');
-            const timeParts = (timeStr.split('.')[0] || timeStr.split('Z')[0] || timeStr).split(':');
+          try {
+            // Parse the deadline string (MySQL returns "YYYY-MM-DD HH:mm:ss")
+            // We need to parse it manually to avoid timezone conversion issues
+            let year, month, day, hours, minutes;
             
-            year = dateParts[0];
-            month = dateParts[1];
-            day = dateParts[2];
-            hours = timeParts[0] || '00';
-            minutes = timeParts[1] || '00';
-          } else {
-            // MySQL DATETIME format: "YYYY-MM-DD HH:mm:ss"
-            const parts = task.deadline.split(/[- :]/);
-            year = parts[0];
-            month = parts[1];
-            day = parts[2];
-            hours = parts[3] || '00';
-            minutes = parts[4] || '00';
+            // Handle different date formats
+            if (task.deadline.includes('T')) {
+              // ISO format: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ssZ"
+              const dateStr = task.deadline.split('T')[0];
+              const timeStr = task.deadline.split('T')[1] || '';
+              const dateParts = dateStr.split('-');
+              const timeParts = (timeStr.split('.')[0] || timeStr.split('Z')[0] || timeStr).split(':');
+              
+              year = dateParts[0] || '';
+              month = dateParts[1] || '';
+              day = dateParts[2] || '';
+              hours = (timeParts[0] || '00').padStart(2, '0');
+              minutes = (timeParts[1] || '00').padStart(2, '0');
+            } else {
+              // MySQL DATETIME format: "YYYY-MM-DD HH:mm:ss"
+              const parts = task.deadline.split(/[- :]/);
+              year = parts[0] || '';
+              month = (parts[1] || '').padStart(2, '0');
+              day = (parts[2] || '').padStart(2, '0');
+              hours = (parts[3] || '00').padStart(2, '0');
+              minutes = (parts[4] || '00').padStart(2, '0');
+            }
+            
+            // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+            if (year && month && day) {
+              document.getElementById('deadline').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+          } catch (error) {
+            console.error('Error parsing deadline:', error);
           }
-          
-          // Format for datetime-local input (YYYY-MM-DDTHH:mm)
-          document.getElementById('deadline').value = `${year}-${month}-${day}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
         }
 
         // Show form and hide loading
@@ -159,13 +165,28 @@
 
       const title = document.getElementById('title').value.trim();
       const description = document.getElementById('description').value.trim();
-      const deadline = document.getElementById('deadline').value;
+      const deadlineInput = document.getElementById('deadline');
+      const deadline = deadlineInput ? deadlineInput.value : '';
       const status = document.getElementById('status').value;
 
       // Client-side validation
       if (!title || !description) {
         alert('Title and description are required');
         return;
+      }
+
+      // Debug: log what we're sending
+      console.log('Updating task with:', { 
+        title, 
+        description, 
+        deadline: deadline || '(empty)', 
+        deadlineLength: deadline ? deadline.length : 0,
+        status 
+      });
+      
+      // Verify deadline format if provided
+      if (deadline && !deadline.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+        console.warn('Warning: Deadline format might be incorrect:', deadline);
       }
 
       try {
@@ -185,7 +206,9 @@
         }
 
         const data = await res.json();
+        console.log('Update response:', data);
         alert('Task updated successfully!');
+        // Force reload to show updated data
         window.location.href = 'dashboard.html';
       } catch (error) {
         console.error('Error:', error);

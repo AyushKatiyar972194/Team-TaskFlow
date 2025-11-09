@@ -55,16 +55,23 @@ router.post('/', authenticateToken, (req, res) => {
 
   // Convert deadline from datetime-local format (YYYY-MM-DDTHH:mm) to MySQL format (YYYY-MM-DD HH:mm:ss)
   let formattedDeadline = null;
-  if (deadline) {
-    // Replace 'T' with space and add ':00' for seconds if not present
+  if (deadline && deadline.trim() !== '') {
+    // Replace 'T' with space
     formattedDeadline = deadline.replace('T', ' ');
-    if (!formattedDeadline.includes(':')) {
+    // Ensure we have HH:mm:ss format
+    const timePart = formattedDeadline.split(' ')[1] || '';
+    const timeParts = timePart.split(':');
+    if (timeParts.length === 2) {
+      // Add seconds if missing
+      formattedDeadline = formattedDeadline.replace(/:([0-9]{2})$/, ':$1:00');
+    } else if (timeParts.length === 1) {
+      // Add minutes and seconds if missing
       formattedDeadline += ':00:00';
-    } else {
-      const parts = formattedDeadline.split(':');
-      if (parts.length === 2) {
-        formattedDeadline += ':00'; // Add seconds if missing
-      }
+    }
+    // Ensure format is YYYY-MM-DD HH:mm:ss
+    if (!formattedDeadline.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
+      console.error('Invalid deadline format:', formattedDeadline);
+      formattedDeadline = null;
     }
   }
 
@@ -81,6 +88,8 @@ router.put('/:id', authenticateToken, (req, res) => {
   const taskId = req.params.id;
   const { title, description, status, deadline } = req.body;
   
+  console.log('PUT /api/tasks/:id - Received:', { taskId, title, description, status, deadline });
+  
   // Validate required fields
   if (!title || !description) {
     return res.status(400).json({ message: 'Title and description are required' });
@@ -93,17 +102,55 @@ router.put('/:id', authenticateToken, (req, res) => {
   
   // Convert deadline from datetime-local format (YYYY-MM-DDTHH:mm) to MySQL format (YYYY-MM-DD HH:mm:ss)
   let formattedDeadline = null;
-  if (deadline) {
-    // Replace 'T' with space and add ':00' for seconds if not present
-    formattedDeadline = deadline.replace('T', ' ');
-    if (!formattedDeadline.includes(':')) {
-      formattedDeadline += ':00:00';
-    } else {
-      const parts = formattedDeadline.split(':');
-      if (parts.length === 2) {
-        formattedDeadline += ':00'; // Add seconds if missing
+  if (deadline && deadline.trim() !== '') {
+    try {
+      console.log('Converting deadline:', deadline);
+      // Replace 'T' with space
+      formattedDeadline = deadline.replace('T', ' ');
+      
+      // Split into date and time parts
+      const parts = formattedDeadline.split(' ');
+      const datePart = parts[0] || '';
+      const timePart = parts[1] || '';
+      
+      console.log('Split deadline:', { datePart, timePart });
+      
+      if (datePart && timePart) {
+        // Parse time part
+        const timeParts = timePart.split(':');
+        let hours = timeParts[0] || '00';
+        let minutes = timeParts[1] || '00';
+        let seconds = timeParts[2] || '00';
+        
+        console.log('Time parts:', { hours, minutes, seconds });
+        
+        // Ensure two-digit format
+        hours = String(parseInt(hours) || 0).padStart(2, '0');
+        minutes = String(parseInt(minutes) || 0).padStart(2, '0');
+        seconds = String(parseInt(seconds) || 0).padStart(2, '0');
+        
+        // Reconstruct in MySQL format: YYYY-MM-DD HH:mm:ss
+        formattedDeadline = `${datePart} ${hours}:${minutes}:${seconds}`;
+        
+        console.log('Formatted deadline:', formattedDeadline);
+        
+        // Validate final format
+        if (!formattedDeadline.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
+          console.error('Invalid deadline format after conversion:', formattedDeadline);
+          formattedDeadline = null;
+        } else {
+          console.log('Deadline conversion successful:', deadline, '->', formattedDeadline);
+        }
+      } else {
+        console.error('Invalid deadline format - missing date or time:', deadline);
+        formattedDeadline = null;
       }
+    } catch (error) {
+      console.error('Error converting deadline format:', error, deadline);
+      formattedDeadline = null;
     }
+  } else {
+    console.log('No deadline provided or empty');
   }
   
   // First verify the task belongs to the user
@@ -117,11 +164,13 @@ router.put('/:id', authenticateToken, (req, res) => {
     }
     
     // Now update the task with formatted deadline
-    Task.update(taskId, title, description, status || 'pending', formattedDeadline, (err) => {
+    console.log('Updating task with:', { taskId, title, description, status: status || 'pending', deadline: formattedDeadline });
+    Task.update(taskId, title, description, status || 'pending', formattedDeadline, (err, result) => {
       if (err) {
         console.error('Error updating task:', err);
         return res.status(500).json({ message: 'Error updating task', error: err.message });
       }
+      console.log('Task updated successfully. Result:', result);
       res.json({ message: 'Task updated successfully' });
     });
   });

@@ -85,7 +85,7 @@ async function loadTasks() {
             const timeParts = (timeStr.split('.')[0] || timeStr.split('Z')[0] || timeStr).split(':');
             
             year = dateParts[0];
-            monthNum = parseInt(dateParts[1]);
+            monthNum = parseInt(dateParts[1]) || 1;
             day = dateParts[2];
             hours = timeParts[0] || '00';
             minutes = timeParts[1] || '00';
@@ -93,23 +93,28 @@ async function loadTasks() {
             // MySQL DATETIME format: "YYYY-MM-DD HH:mm:ss"
             const parts = task.deadline.split(/[- :]/);
             year = parts[0];
-            monthNum = parseInt(parts[1]);
+            monthNum = parseInt(parts[1]) || 1;
             day = parts[2];
             hours = parts[3] || '00';
             minutes = parts[4] || '00';
           }
           
-          // Use the raw values directly for display (no Date object conversion)
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const displayMonth = monthNames[monthNum - 1];
-          const displayDay = parseInt(day);
-          const displayYear = parseInt(year);
-          const displayHours = String(parseInt(hours)).padStart(2, '0');
-          const displayMinutes = String(parseInt(minutes)).padStart(2, '0');
-          
-          deadline = `${displayMonth} ${displayDay}, ${displayYear} ${displayHours}:${displayMinutes}`;
+          // Validate parsed values
+          if (year && monthNum >= 1 && monthNum <= 12 && day) {
+            // Use the raw values directly for display (no Date object conversion)
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const displayMonth = monthNames[monthNum - 1] || 'Jan';
+            const displayDay = parseInt(day) || 1;
+            const displayYear = parseInt(year) || new Date().getFullYear();
+            const displayHours = String(parseInt(hours) || 0).padStart(2, '0');
+            const displayMinutes = String(parseInt(minutes) || 0).padStart(2, '0');
+            
+            deadline = `${displayMonth} ${displayDay}, ${displayYear} ${displayHours}:${displayMinutes}`;
+          } else {
+            deadline = task.deadline; // Fallback to raw value if parsing failed
+          }
         } catch (error) {
-          console.error('Error formatting deadline:', error);
+          console.error('Error formatting deadline:', error, task.deadline);
           deadline = task.deadline; // Fallback to raw value
         }
       }

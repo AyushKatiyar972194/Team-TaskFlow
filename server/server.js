@@ -1,45 +1,44 @@
+require('./models/db');
+require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
+const { initDatabase } = require('./models/initDb');
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
+const authRoutes = require('./routes/authRoutes');
+const protectedRoutes = require('./routes/protectedRoutes');
 
-// Serve static files from the public directory
-app.use('/api/tasks', require('./routes/taskRoutes'));
-app.use(express.static(path.join(__dirname, '../public')));
+// Initialize database tables
+setTimeout(() => {
+  initDatabase()
+    .then(() => {
+      console.log('✅ Database initialization complete');
+    })
+    .catch((err) => {
+      console.error('❌ Database initialization failed:', err.message);
+    });
+}, 1000); // Wait 1 second for database connection to establish
+
+// Middleware
+app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api', protectedRoutes);
+app.use('/api/tasks', require('./routes/taskRoutes'));
 
 // Basic route for the home page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
-// server.js
-require('./models/db');
-const express = require('express');
-require('dotenv').config();
-const authRoutes = require('./routes/authRoutes');
-const protectedRoutes = require('./routes/protectedRoutes');
-const db = require('./db'); // ensure pool is created so we know connection params are valid
+// Health check route
+app.get('/health', (req, res) => res.json({ message: 'API is running' }));
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use('/api/auth', require('./routes/authRoutes')); 
-// parse JSON bodies
-app.use(express.json());
-
-// simple health
-app.get('/', (req, res) => res.send('API is running'));
-
-// routes
-app.use('/api/auth', authRoutes);
-app.use('/api', protectedRoutes);
-
-// global error logger (simple)
+// Global error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error', err);
   res.status(500).json({ message: 'Internal server error' });

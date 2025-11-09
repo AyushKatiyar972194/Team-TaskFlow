@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Add Task | Team TaskFlow</title>
+  <title>Edit Task | Team TaskFlow</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="static/css/style.css">
 </head>
@@ -23,10 +23,16 @@
       <div class="col-md-6">
         <div class="card shadow-lg">
           <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Create New Task</h4>
+            <h4 class="mb-0">Edit Task</h4>
           </div>
           <div class="card-body p-4">
-            <form id="taskForm">
+            <div id="loading" class="text-center my-3">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <div id="error" class="alert alert-danger" style="display: none;"></div>
+            <form id="taskForm" style="display: none;">
               <div class="mb-3">
                 <label for="title" class="form-label">Task Title <span class="text-danger">*</span></label>
                 <input type="text" class="form-control" id="title" placeholder="Enter task title" required>
@@ -42,13 +48,13 @@
               <div class="mb-3">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status">
-                  <option value="pending" selected>Pending</option>
+                  <option value="pending">Pending</option>
                   <option value="in-progress">In Progress</option>
                   <option value="completed">Completed</option>
                 </select>
               </div>
               <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary">Create Task</button>
+                <button type="submit" class="btn btn-primary">Update Task</button>
                 <a href="dashboard.html" class="btn btn-outline-secondary">Cancel</a>
               </div>
             </form>
@@ -65,6 +71,67 @@
       window.location.href = 'login.html';
     }
 
+    // Get task ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const taskId = urlParams.get('id');
+
+    if (!taskId) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = 'Task ID not provided';
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 2000);
+    } else {
+      // Load task data
+      loadTask(taskId);
+    }
+
+    async function loadTask(id) {
+      try {
+        const res = await fetch(`/api/tasks/${id}`, {
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+          throw new Error(errorData.message || 'Failed to load task');
+        }
+
+        const task = await res.json();
+        
+        // Populate form fields
+        document.getElementById('title').value = task.title || '';
+        document.getElementById('description').value = task.description || '';
+        document.getElementById('status').value = task.status || 'pending';
+        
+        // Format deadline for datetime-local input
+        if (task.deadline) {
+          const deadlineDate = new Date(task.deadline);
+          const year = deadlineDate.getFullYear();
+          const month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+          const day = String(deadlineDate.getDate()).padStart(2, '0');
+          const hours = String(deadlineDate.getHours()).padStart(2, '0');
+          const minutes = String(deadlineDate.getMinutes()).padStart(2, '0');
+          document.getElementById('deadline').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        // Show form and hide loading
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('taskForm').style.display = 'block';
+      } catch (error) {
+        console.error('Error loading task:', error);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = error.message || 'Failed to load task';
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 2000);
+      }
+    }
+
     document.getElementById('taskForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -74,8 +141,8 @@
       const status = document.getElementById('status').value;
 
       try {
-        const res = await fetch('/api/tasks', {
-          method: 'POST',
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + token
@@ -86,10 +153,10 @@
         const data = await res.json();
 
         if (res.ok) {
-          alert('Task created successfully!');
+          alert('Task updated successfully!');
           window.location.href = 'dashboard.html';
         } else {
-          alert(data.message || 'Failed to create task');
+          alert(data.message || 'Failed to update task');
         }
       } catch (error) {
         console.error('Error:', error);
@@ -99,6 +166,7 @@
 
     function logout() {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = 'login.html';
     }
   </script>

@@ -1,0 +1,30 @@
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+.card {
+  border-radius: 15px;
+  background-color: #ffffff;
+}
+
+h3 {
+  color: #0d6efd;
+}
+
+.btn-primary {
+  background-color: #0d6efd;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+}
+@media (max-width: 768px) {
+  .card {
+    width: 100% !important;
+  }
+  .navbar-brand {
+    font-size: 1rem;
+  }
+}
+

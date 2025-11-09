@@ -68,10 +68,16 @@
     document.getElementById('taskForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const title = document.getElementById('title').value;
-      const description = document.getElementById('description').value;
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
       const deadline = document.getElementById('deadline').value;
       const status = document.getElementById('status').value;
+
+      // Client-side validation
+      if (!title || !description) {
+        alert('Title and description are required');
+        return;
+      }
 
       try {
         const res = await fetch('/api/tasks', {
@@ -83,14 +89,15 @@
           body: JSON.stringify({ title, description, deadline, status })
         });
 
-        const data = await res.json();
-
-        if (res.ok) {
-          alert('Task created successfully!');
-          window.location.href = 'dashboard.html';
-        } else {
-          alert(data.message || 'Failed to create task');
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: 'Unknown error' }));
+          alert(errorData.message || 'Failed to create task');
+          return;
         }
+
+        const data = await res.json();
+        alert('Task created successfully!');
+        window.location.href = 'dashboard.html';
       } catch (error) {
         console.error('Error:', error);
         alert('An error occurred. Please try again.');

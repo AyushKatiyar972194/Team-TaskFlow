@@ -25,6 +25,12 @@ router.get('/', authenticateToken, (req, res) => {
 
 router.get('/:id', authenticateToken, (req, res) => {
   const taskId = req.params.id;
+  
+  // Validate task ID
+  if (!taskId || isNaN(taskId)) {
+    return res.status(400).json({ message: 'Invalid task ID' });
+  }
+  
   Task.getById(taskId, req.user.id, (err, result) => {
     if (err) {
       console.error('Error fetching task:', err);
@@ -42,11 +48,16 @@ router.get('/:id', authenticateToken, (req, res) => {
 
 router.post('/', authenticateToken, (req, res) => {
   const { title, description, deadline, status } = req.body;
-  if (!title || !description)
+  
+  if (!title || !description) {
     return res.status(400).json({ message: 'Title and description are required' });
+  }
 
   Task.create(req.user.id, title, description, deadline, status || 'pending', (err, result) => {
-    if (err) return res.status(500).json({ message: 'Error creating task' });
+    if (err) {
+      console.error('Error creating task:', err);
+      return res.status(500).json({ message: 'Error creating task', error: err.message });
+    }
     res.status(201).json({ message: 'Task created successfully', id: result.insertId });
   });
 });
@@ -55,21 +66,31 @@ router.put('/:id', authenticateToken, (req, res) => {
   const taskId = req.params.id;
   const { title, description, status, deadline } = req.body;
   
+  // Validate required fields
+  if (!title || !description) {
+    return res.status(400).json({ message: 'Title and description are required' });
+  }
+  
+  // Validate task ID
+  if (!taskId || isNaN(taskId)) {
+    return res.status(400).json({ message: 'Invalid task ID' });
+  }
+  
   // First verify the task belongs to the user
   Task.getById(taskId, req.user.id, (err, task) => {
     if (err) {
       console.error('Error fetching task for update:', err);
-      return res.status(500).json({ message: 'Error updating task' });
+      return res.status(500).json({ message: 'Error updating task', error: err.message });
     }
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
     
     // Now update the task
-    Task.update(taskId, title, description, status, deadline, (err) => {
+    Task.update(taskId, title, description, status || 'pending', deadline, (err) => {
       if (err) {
         console.error('Error updating task:', err);
-        return res.status(500).json({ message: 'Error updating task' });
+        return res.status(500).json({ message: 'Error updating task', error: err.message });
       }
       res.json({ message: 'Task updated successfully' });
     });
@@ -79,11 +100,16 @@ router.put('/:id', authenticateToken, (req, res) => {
 router.delete('/:id', authenticateToken, (req, res) => {
   const taskId = req.params.id;
   
+  // Validate task ID
+  if (!taskId || isNaN(taskId)) {
+    return res.status(400).json({ message: 'Invalid task ID' });
+  }
+  
   // First verify the task belongs to the user
   Task.getById(taskId, req.user.id, (err, task) => {
     if (err) {
       console.error('Error fetching task for delete:', err);
-      return res.status(500).json({ message: 'Error deleting task' });
+      return res.status(500).json({ message: 'Error deleting task', error: err.message });
     }
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
@@ -93,7 +119,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
     Task.delete(taskId, (err) => {
       if (err) {
         console.error('Error deleting task:', err);
-        return res.status(500).json({ message: 'Error deleting task' });
+        return res.status(500).json({ message: 'Error deleting task', error: err.message });
       }
       res.json({ message: 'Task deleted successfully' });
     });

@@ -53,7 +53,22 @@ router.post('/', authenticateToken, (req, res) => {
     return res.status(400).json({ message: 'Title and description are required' });
   }
 
-  Task.create(req.user.id, title, description, deadline, status || 'pending', (err, result) => {
+  // Convert deadline from datetime-local format (YYYY-MM-DDTHH:mm) to MySQL format (YYYY-MM-DD HH:mm:ss)
+  let formattedDeadline = null;
+  if (deadline) {
+    // Replace 'T' with space and add ':00' for seconds if not present
+    formattedDeadline = deadline.replace('T', ' ');
+    if (!formattedDeadline.includes(':')) {
+      formattedDeadline += ':00:00';
+    } else {
+      const parts = formattedDeadline.split(':');
+      if (parts.length === 2) {
+        formattedDeadline += ':00'; // Add seconds if missing
+      }
+    }
+  }
+
+  Task.create(req.user.id, title, description, formattedDeadline, status || 'pending', (err, result) => {
     if (err) {
       console.error('Error creating task:', err);
       return res.status(500).json({ message: 'Error creating task', error: err.message });
@@ -76,6 +91,21 @@ router.put('/:id', authenticateToken, (req, res) => {
     return res.status(400).json({ message: 'Invalid task ID' });
   }
   
+  // Convert deadline from datetime-local format (YYYY-MM-DDTHH:mm) to MySQL format (YYYY-MM-DD HH:mm:ss)
+  let formattedDeadline = null;
+  if (deadline) {
+    // Replace 'T' with space and add ':00' for seconds if not present
+    formattedDeadline = deadline.replace('T', ' ');
+    if (!formattedDeadline.includes(':')) {
+      formattedDeadline += ':00:00';
+    } else {
+      const parts = formattedDeadline.split(':');
+      if (parts.length === 2) {
+        formattedDeadline += ':00'; // Add seconds if missing
+      }
+    }
+  }
+  
   // First verify the task belongs to the user
   Task.getById(taskId, req.user.id, (err, task) => {
     if (err) {
@@ -86,8 +116,8 @@ router.put('/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
     
-    // Now update the task
-    Task.update(taskId, title, description, status || 'pending', deadline, (err) => {
+    // Now update the task with formatted deadline
+    Task.update(taskId, title, description, status || 'pending', formattedDeadline, (err) => {
       if (err) {
         console.error('Error updating task:', err);
         return res.status(500).json({ message: 'Error updating task', error: err.message });

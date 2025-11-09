@@ -75,7 +75,7 @@ async function loadTasks() {
       if (task.deadline) {
         try {
           // Parse the deadline string manually (MySQL returns "YYYY-MM-DD HH:mm:ss")
-          let year, month, day, hours, minutes;
+          let year, monthNum, day, hours, minutes;
           
           if (task.deadline.includes('T')) {
             // ISO format: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ssZ"
@@ -84,31 +84,28 @@ async function loadTasks() {
             const dateParts = dateStr.split('-');
             const timeParts = (timeStr.split('.')[0] || timeStr.split('Z')[0] || timeStr).split(':');
             
-            year = parseInt(dateParts[0]);
-            month = parseInt(dateParts[1]) - 1; // 0-indexed
-            day = parseInt(dateParts[2]);
-            hours = parseInt(timeParts[0] || 0);
-            minutes = parseInt(timeParts[1] || 0);
+            year = dateParts[0];
+            monthNum = parseInt(dateParts[1]);
+            day = dateParts[2];
+            hours = timeParts[0] || '00';
+            minutes = timeParts[1] || '00';
           } else {
             // MySQL DATETIME format: "YYYY-MM-DD HH:mm:ss"
             const parts = task.deadline.split(/[- :]/);
-            year = parseInt(parts[0]);
-            month = parseInt(parts[1]) - 1; // 0-indexed
-            day = parseInt(parts[2]);
-            hours = parseInt(parts[3] || 0);
-            minutes = parseInt(parts[4] || 0);
+            year = parts[0];
+            monthNum = parseInt(parts[1]);
+            day = parts[2];
+            hours = parts[3] || '00';
+            minutes = parts[4] || '00';
           }
           
-          // Create date object with local time components
-          const deadlineDate = new Date(year, month, day, hours, minutes);
-          
-          // Format for display
+          // Use the raw values directly for display (no Date object conversion)
           const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const displayMonth = monthNames[deadlineDate.getMonth()];
-          const displayDay = deadlineDate.getDate();
-          const displayYear = deadlineDate.getFullYear();
-          const displayHours = String(deadlineDate.getHours()).padStart(2, '0');
-          const displayMinutes = String(deadlineDate.getMinutes()).padStart(2, '0');
+          const displayMonth = monthNames[monthNum - 1];
+          const displayDay = parseInt(day);
+          const displayYear = parseInt(year);
+          const displayHours = String(parseInt(hours)).padStart(2, '0');
+          const displayMinutes = String(parseInt(minutes)).padStart(2, '0');
           
           deadline = `${displayMonth} ${displayDay}, ${displayYear} ${displayHours}:${displayMinutes}`;
         } catch (error) {

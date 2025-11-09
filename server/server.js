@@ -1,13 +1,14 @@
 // server.js
+require('./models/db');
 const express = require('express');
 require('dotenv').config();
-const authRoutes = require('./routes/authRoutes');
+const vauthRoutes = require('./routes/authRoutes');
 const protectedRoutes = require('./routes/protectedRoutes');
-const db = require('./db'); // ensure pool is created so we know connection params are valid
+const db = require('/db'); // ensure pool is created so we know connection params are valid
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+z
 // parse JSON bodies
 app.use(express.json());
 
